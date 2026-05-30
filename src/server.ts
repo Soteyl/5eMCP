@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerHelpTool } from "./tools/help.js";
 import { registerMetaTools } from "./tools/meta.js";
 import { registerPassthroughTools } from "./tools/passthrough.js";
 import { registerTypedTools } from "./tools/typed.js";
@@ -12,6 +13,7 @@ export function createServer(): McpServer {
     version: "1.0.2",
   });
 
+  registerHelpTool(server);
   registerMetaTools(server);
   registerPassthroughTools(server);
   registerTypedTools(server);

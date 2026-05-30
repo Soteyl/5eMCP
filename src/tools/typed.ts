@@ -34,6 +34,8 @@ interface ContentToolConfig {
   hasGet?: boolean;
   /** Optional structured filter parameters for the _search tool */
   filters?: FilterSpec;
+  /** Override description for the _get tool (replaces auto-generated text) */
+  getDescription?: string;
 }
 
 const CONTENT_TOOLS: ContentToolConfig[] = [
@@ -126,7 +128,18 @@ const CONTENT_TOOLS: ContentToolConfig[] = [
   { noun: "sense", folder: "senses", description: "D&D 5e sense (e.g. darkvision, tremorsense)" },
   { noun: "book", folder: "books", description: "D&D 5e sourcebook", hasGet: true },
   { noun: "adventure", folder: "adventures", description: "D&D 5e published adventure", hasGet: true },
-  { noun: "class", folder: "class", description: "D&D 5e character class", hasGet: true },
+  {
+    noun: "class",
+    folder: "class",
+    description: "D&D 5e character class",
+    hasGet: true,
+    getDescription:
+      "Get a D&D 5e character class by exact name. " +
+      "Returns the full class entry plus a resolvedFeatures array containing the complete text of every class feature at each level — " +
+      "no reference strings, actual feature descriptions. " +
+      "The ruleset param selects the correct edition: '2024' returns the 2024 XPHB version (e.g. XPHB Wizard), '2014' returns the classic PHB version. " +
+      "For features at a specific level use classfeature_search. For subclass details use subclass_get or subclassfeature_search.",
+  },
   {
     noun: "subclass",
     folder: "subclass",
@@ -149,7 +162,7 @@ const CONTENT_TOOLS: ContentToolConfig[] = [
 
 export function registerTypedTools(server: McpServer): void {
   for (const config of CONTENT_TOOLS) {
-    const { noun, folder, description, hasGet, filters } = config;
+    const { noun, folder, description, hasGet, filters, getDescription } = config;
 
     // Search tool
     const searchSchema = {
@@ -167,7 +180,8 @@ export function registerTypedTools(server: McpServer): void {
 
     server.tool(
       `${noun}_search`,
-      `Search ${description}s by name. Returns a list of matching entries.`,
+      `Search ${description}s by name. Returns a list of matching entries. ` +
+        `Use when you know the content type; if unsure of the type, use omnisearch instead.`,
       searchSchema,
       async (params) => {
         const { query, ruleset, limit, fields, include_homebrew = false, ...rest } = params as {
@@ -190,7 +204,9 @@ export function registerTypedTools(server: McpServer): void {
     if (hasGet) {
       server.tool(
         `${noun}_get`,
-        `Get a specific ${description} by exact name. Returns full entry with fluff/description merged.`,
+        getDescription ??
+          `Get a specific ${description} by exact name. Returns the complete entry with description merged in. ` +
+          `Prefer this over ${noun}_search when you have an exact name.`,
         {
           name: z.string().describe(`Exact name of the ${noun} (case-insensitive)`),
           source: z.string().optional().describe("Source abbreviation to disambiguate (e.g. PHB, XGE)"),

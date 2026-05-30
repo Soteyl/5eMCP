@@ -9,10 +9,11 @@ export function registerOmnisearchTool(server: McpServer): void {
   server.tool(
     "omnisearch",
     [
-      "Search across ALL D&D 5e content types simultaneously.",
-      "Returns matching spells, monsters, items, conditions, vehicles, and more in one call.",
-      "Each result includes an entityType field indicating its content type.",
-      "Use this when you don't know what type of thing the user is looking for.",
+      "Search across ALL D&D 5e content types simultaneously — spells, monsters, items, classes, subclasses, feats, races, backgrounds, conditions, and more.",
+      "Start here when you don't know what type of content you need.",
+      "Each result includes an entityType field so you can tell what kind of thing was found.",
+      "For deeper filtering within a single type, follow up with the typed _search tool (e.g. spell_search, monster_search).",
+      "Homebrew is included by default.",
     ].join(" "),
     {
       query: z.string().describe("Name or partial name to search for across all content types"),

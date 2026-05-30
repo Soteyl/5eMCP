@@ -25,6 +25,9 @@ describe("createServer", () => {
     const tools = (server as any)._registeredTools as Record<string, unknown>;
     const toolNames = Object.keys(tools);
 
+    // Help / discoverability
+    expect(toolNames).toContain("help");
+
     // Meta tools
     expect(toolNames).toContain("manifest_status");
     expect(toolNames).toContain("list_sources");

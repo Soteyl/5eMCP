@@ -12,10 +12,11 @@ export function registerPassthroughTools(server: McpServer): void {
   server.tool(
     "fetch_content",
     [
-      "Fetch and translate any file in the manifest by content type and file name.",
+      "Fallback tool — fetch any file in the manifest by content type and file name.",
+      "Prefer the typed _search and _get tools (spell_search, monster_get, class_get, etc.) when available.",
+      "Use fetch_content for content types that don't have a typed tool, or when you need raw file access.",
+      "Omit file_name to list available files for a content type.",
       "Returns tag-resolved, metadata-stripped JSON.",
-      "Use this for any content type, especially those without typed handlers.",
-      "Omit file_name to list available files for the content type.",
     ].join(" "),
     {
       content_type: z
