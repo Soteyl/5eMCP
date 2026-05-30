@@ -7,7 +7,7 @@ import { createServer } from "../src/server.js";
  * any name collision introduced by future tool additions.
  */
 describe("createServer", () => {
-  it("registers all tools without duplicate name collisions", () => {
+  it("registers all tools and prompts without errors", () => {
     expect(() => createServer()).not.toThrow();
   });
 
