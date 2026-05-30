@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   CONTENT_KEY_MAP,
   FLUFF_KEY_MAP,
+  MANIFEST_FOLDER_MAP,
   getContentKey,
   getFluffKey,
+  getManifestFolder,
 } from "../../../src/translation/handlers/types.js";
 
 describe("CONTENT_KEY_MAP", () => {
@@ -101,6 +103,44 @@ describe("CONTENT_KEY_MAP", () => {
 
   it("maps subclass to subclass", () => {
     expect(CONTENT_KEY_MAP["subclass"]).toBe("subclass");
+  });
+
+  it("maps classfeatures to classFeature", () => {
+    expect(CONTENT_KEY_MAP["classfeatures"]).toBe("classFeature");
+  });
+
+  it("maps subclassfeatures to subclassFeature", () => {
+    expect(CONTENT_KEY_MAP["subclassfeatures"]).toBe("subclassFeature");
+  });
+});
+
+describe("MANIFEST_FOLDER_MAP", () => {
+  it("maps subclass to class (subclass data lives in class files)", () => {
+    expect(MANIFEST_FOLDER_MAP["subclass"]).toBe("class");
+  });
+
+  it("maps classfeatures to class", () => {
+    expect(MANIFEST_FOLDER_MAP["classfeatures"]).toBe("class");
+  });
+
+  it("maps subclassfeatures to class", () => {
+    expect(MANIFEST_FOLDER_MAP["subclassfeatures"]).toBe("class");
+  });
+});
+
+describe("getManifestFolder", () => {
+  it("returns 'class' for subclass", () => {
+    expect(getManifestFolder("subclass")).toBe("class");
+  });
+
+  it("returns 'class' for classfeatures", () => {
+    expect(getManifestFolder("classfeatures")).toBe("class");
+  });
+
+  it("returns the folder itself for types not in the map", () => {
+    expect(getManifestFolder("spells")).toBe("spells");
+    expect(getManifestFolder("bestiary")).toBe("bestiary");
+    expect(getManifestFolder("class")).toBe("class");
   });
 });
 

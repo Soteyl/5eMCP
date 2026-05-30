@@ -127,7 +127,24 @@ const CONTENT_TOOLS: ContentToolConfig[] = [
   { noun: "book", folder: "books", description: "D&D 5e sourcebook", hasGet: true },
   { noun: "adventure", folder: "adventures", description: "D&D 5e published adventure", hasGet: true },
   { noun: "class", folder: "class", description: "D&D 5e character class", hasGet: true },
-  { noun: "subclass", folder: "subclass", description: "D&D 5e subclass or archetype", hasGet: true },
+  {
+    noun: "subclass",
+    folder: "subclass",
+    description: "D&D 5e subclass or archetype",
+    hasGet: true,
+    filters: {
+      schema: {
+        class_name: z.string().optional().describe(
+          "Filter by parent class name (e.g. 'Wizard', 'Fighter')",
+        ),
+      },
+      build: ({ class_name }) => {
+        const filters: Record<string, unknown> = {};
+        if (typeof class_name === "string" && class_name) filters.className = class_name;
+        return filters;
+      },
+    },
+  },
 ];
 
 export function registerTypedTools(server: McpServer): void {
@@ -194,4 +211,59 @@ export function registerTypedTools(server: McpServer): void {
       );
     }
   }
+
+  // ── classfeature_search ────────────────────────────────────────────────────
+  server.tool(
+    "classfeature_search",
+    "Search D&D 5e class features by name or class. " +
+      "Returns features from the classFeature array embedded in class files. " +
+      "Use class_name to filter to a specific class (e.g. 'Wizard'). " +
+      "Use level to find features gained at a specific level. " +
+      "When ruleset='2024', returns 2024 (XPHB) features; '2014' returns classic features.",
+    {
+      query: z.string().describe("Name or partial name of the feature to search for"),
+      ruleset: RulesetSchema.describe("Which ruleset to search"),
+      limit: z.number().int().min(1).max(100).default(DEFAULT_LIMIT).describe("Max results to return"),
+      class_name: z.string().optional().describe("Filter by class name (e.g. 'Wizard', 'Fighter')"),
+      level: z.number().int().min(1).max(20).optional().describe("Filter by character level when the feature is gained"),
+      fields: z.array(z.string()).optional().describe("Fields to include in each result"),
+      include_homebrew: z.boolean().default(false).describe("Include homebrew content"),
+    },
+    async ({ query, ruleset, limit, class_name, level, fields, include_homebrew = false }) => {
+      const filters: Record<string, unknown> = {};
+      if (class_name) filters.className = class_name;
+      if (level !== undefined) filters.level = level;
+      const results = await searchContentType("classfeatures", query, ruleset as "2024" | "2014", limit, filters, fields, include_homebrew);
+      return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+    },
+  );
+
+  // ── subclassfeature_search ─────────────────────────────────────────────────
+  server.tool(
+    "subclassfeature_search",
+    "Search D&D 5e subclass features by name, class, or subclass. " +
+      "Returns features from the subclassFeature array embedded in class files. " +
+      "Use class_name to filter to a parent class (e.g. 'Wizard'). " +
+      "Use subclass_name to filter to a specific subclass (e.g. 'Abjurer'). " +
+      "Use level to find features gained at a specific level. " +
+      "When ruleset='2024', returns 2024 (XPHB) features; '2014' returns classic features.",
+    {
+      query: z.string().describe("Name or partial name of the feature to search for"),
+      ruleset: RulesetSchema.describe("Which ruleset to search"),
+      limit: z.number().int().min(1).max(100).default(DEFAULT_LIMIT).describe("Max results to return"),
+      class_name: z.string().optional().describe("Filter by parent class name (e.g. 'Wizard')"),
+      subclass_name: z.string().optional().describe("Filter by subclass short name (e.g. 'Abjurer', 'Champion')"),
+      level: z.number().int().min(1).max(20).optional().describe("Filter by character level when the feature is gained"),
+      fields: z.array(z.string()).optional().describe("Fields to include in each result"),
+      include_homebrew: z.boolean().default(false).describe("Include homebrew content"),
+    },
+    async ({ query, ruleset, limit, class_name, subclass_name, level, fields, include_homebrew = false }) => {
+      const filters: Record<string, unknown> = {};
+      if (class_name) filters.className = class_name;
+      if (subclass_name) filters.subclassShortName = subclass_name;
+      if (level !== undefined) filters.level = level;
+      const results = await searchContentType("subclassfeatures", query, ruleset as "2024" | "2014", limit, filters, fields, include_homebrew);
+      return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+    },
+  );
 }

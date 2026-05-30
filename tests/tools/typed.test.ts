@@ -299,6 +299,54 @@ describe("registerTypedTools", () => {
     expect(tools["class_get"]).toBeDefined();
   });
 
+  it("registers subclass_search tool", () => {
+    const { server, tools } = makeServer();
+    registerTypedTools(server);
+    expect(tools["subclass_search"]).toBeDefined();
+  });
+
+  it("registers subclass_get tool", () => {
+    const { server, tools } = makeServer();
+    registerTypedTools(server);
+    expect(tools["subclass_get"]).toBeDefined();
+  });
+
+  it("registers classfeature_search tool", () => {
+    const { server, tools } = makeServer();
+    registerTypedTools(server);
+    expect(tools["classfeature_search"]).toBeDefined();
+  });
+
+  it("registers subclassfeature_search tool", () => {
+    const { server, tools } = makeServer();
+    registerTypedTools(server);
+    expect(tools["subclassfeature_search"]).toBeDefined();
+  });
+
+  it("classfeature_search passes class_name filter as className", async () => {
+    const { server, tools } = makeServer();
+    registerTypedTools(server);
+    const [, , , handler] = tools["classfeature_search"] as [string, string, unknown, (...args: unknown[]) => Promise<unknown>];
+    await handler({ query: "", ruleset: "2024", limit: 20, class_name: "Wizard" });
+    expect(mockSearch).toHaveBeenCalledWith("classfeatures", "", "2024", 20, { className: "Wizard" }, undefined, false);
+  });
+
+  it("classfeature_search passes level filter", async () => {
+    const { server, tools } = makeServer();
+    registerTypedTools(server);
+    const [, , , handler] = tools["classfeature_search"] as [string, string, unknown, (...args: unknown[]) => Promise<unknown>];
+    await handler({ query: "", ruleset: "2024", limit: 20, level: 1 });
+    expect(mockSearch).toHaveBeenCalledWith("classfeatures", "", "2024", 20, { level: 1 }, undefined, false);
+  });
+
+  it("subclassfeature_search passes class_name and subclass_name filters", async () => {
+    const { server, tools } = makeServer();
+    registerTypedTools(server);
+    const [, , , handler] = tools["subclassfeature_search"] as [string, string, unknown, (...args: unknown[]) => Promise<unknown>];
+    await handler({ query: "", ruleset: "2024", limit: 20, class_name: "Wizard", subclass_name: "Abjurer" });
+    expect(mockSearch).toHaveBeenCalledWith("subclassfeatures", "", "2024", 20, { className: "Wizard", subclassShortName: "Abjurer" }, undefined, false);
+  });
+
   it("class_search calls searchContentType with class folder", async () => {
     const { server, tools } = makeServer();
     registerTypedTools(server);

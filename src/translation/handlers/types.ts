@@ -27,6 +27,20 @@ export const CONTENT_KEY_MAP: Record<string, string> = {
   adventures: "adventure",
   class: "class",
   subclass: "subclass",
+  // class features and subclass features are embedded in class files
+  classfeatures: "classFeature",
+  subclassfeatures: "subclassFeature",
+};
+
+/**
+ * Maps content type folder names to the manifest folder where their files live.
+ * Most types are stored in their own folder, but class-related subtypes are
+ * embedded in class files rather than having their own files.
+ */
+export const MANIFEST_FOLDER_MAP: Record<string, string> = {
+  subclass: "class",
+  classfeatures: "class",
+  subclassfeatures: "class",
 };
 
 /**
@@ -52,4 +66,13 @@ export function getContentKey(folder: string): string | undefined {
 /** Returns the fluff JSON array key for a given content key, or undefined. */
 export function getFluffKey(contentKey: string): string | undefined {
   return FLUFF_KEY_MAP[contentKey];
+}
+
+/**
+ * Returns the manifest folder where files for this content type live.
+ * Most types use their own folder; class subtypes (subclass, classfeatures,
+ * subclassfeatures) are embedded in class files.
+ */
+export function getManifestFolder(contentTypeFolder: string): string {
+  return MANIFEST_FOLDER_MAP[contentTypeFolder] ?? contentTypeFolder;
 }

@@ -1,5 +1,4 @@
 import { searchContentType } from "./index.js";
-import { CONTENT_KEY_MAP } from "../translation/handlers/types.js";
 import type { Ruleset } from "../types.js";
 
 /** Maps manifest folder name to the singular noun used as entityType */
@@ -45,7 +44,7 @@ export async function omnisearch(
   perTypeLimit = PER_TYPE_LIMIT,
   include_homebrew = true,
 ): Promise<Record<string, unknown>[]> {
-  const folders = Object.keys(CONTENT_KEY_MAP);
+  const folders = Object.keys(FOLDER_TO_NOUN);
 
   const settled = await Promise.allSettled(
     folders.map(async (folder) => {

@@ -1,6 +1,6 @@
 import { getManifest } from "../manifest/refresh.js";
 import { fetchRaw } from "../github.js";
-import { CONTENT_KEY_MAP } from "../translation/handlers/types.js";
+import { CONTENT_KEY_MAP, getManifestFolder } from "../translation/handlers/types.js";
 import { stripInternalFields } from "../translation/strip.js";
 import { resolveTagsDeep } from "../translation/tags.js";
 import type { Ruleset } from "../types.js";
@@ -151,7 +151,8 @@ export async function searchContentType(
   const contentKey = CONTENT_KEY_MAP[contentTypeFolder];
   if (!contentKey) return [];
 
-  const files = manifest.content[contentTypeFolder] ?? [];
+  const manifestFolder = getManifestFolder(contentTypeFolder);
+  const files = manifest.content[manifestFolder] ?? [];
 
   const lowerQuery = query.toLowerCase();
   const results: Record<string, unknown>[] = [];
@@ -159,7 +160,7 @@ export async function searchContentType(
   await searchFiles(files, contentKey, lowerQuery, filters, results, limit);
 
   if (include_homebrew && results.length < limit) {
-    const homebrewFiles = manifest.homebrew[contentTypeFolder];
+    const homebrewFiles = manifest.homebrew[manifestFolder];
     if (homebrewFiles && homebrewFiles.length > 0) {
       await searchFiles(homebrewFiles, contentKey, lowerQuery, filters, results, limit);
     }
