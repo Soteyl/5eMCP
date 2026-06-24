@@ -1,4 +1,4 @@
-import { fetchContents, rawUrl } from "../github.js";
+import { fetchContents, rawUrl, isLocalMode } from "../github.js";
 import type { Manifest, ManifestFile } from "./schema.js";
 import type { Ruleset, GitHubContentsItem } from "../types.js";
 import { REPOS, HOMEBREW_REPO } from "../types.js";
@@ -110,12 +110,15 @@ export async function buildManifest(ruleset: Ruleset): Promise<Manifest> {
     content[contentType].push(file);
   }
 
-  // Build homebrew manifest
+  // Build homebrew manifest (skipped in local mode — no local homebrew copy,
+  // and we must not hit the network).
   const homebrew: Record<string, ManifestFile[]> = {};
-  try {
-    await buildHomebrewManifest(homebrew);
-  } catch (err) {
-    console.error("Failed to build homebrew manifest:", err);
+  if (!isLocalMode()) {
+    try {
+      await buildHomebrewManifest(homebrew);
+    } catch (err) {
+      console.error("Failed to build homebrew manifest:", err);
+    }
   }
 
   return {

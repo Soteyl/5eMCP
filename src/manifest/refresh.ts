@@ -1,6 +1,7 @@
 import { buildManifest } from "./builder.js";
 import { cacheSet, cacheGetWithTTL } from "../cache/index.js";
 import { manifestKey } from "../cache/keys.js";
+import { isLocalMode } from "../github.js";
 import type { Manifest } from "./schema.js";
 import type { Ruleset } from "../types.js";
 
@@ -19,19 +20,25 @@ export async function getManifest(ruleset: Ruleset): Promise<Manifest> {
     }
   }
 
-  // Check disk cache with TTL
+  // Disk cache stores GitHub URLs and is keyed only by ruleset, so it must be
+  // bypassed in local mode (avoids stale cross-mode contamination). Local
+  // builds are fast and the in-memory map above still prevents rebuilds.
   const key = manifestKey(ruleset);
-  const cached = await cacheGetWithTTL<Manifest>(key, TTL_SECONDS);
-  if (cached) {
-    manifests.set(ruleset, cached);
-    return cached;
+  if (!isLocalMode()) {
+    const cached = await cacheGetWithTTL<Manifest>(key, TTL_SECONDS);
+    if (cached) {
+      manifests.set(ruleset, cached);
+      return cached;
+    }
   }
 
   // Build fresh
   console.error(`Building manifest for ruleset ${ruleset}...`);
   const manifest = await buildManifest(ruleset);
   manifests.set(ruleset, manifest);
-  await cacheSet(key, manifest, TTL_SECONDS);
+  if (!isLocalMode()) {
+    await cacheSet(key, manifest, TTL_SECONDS);
+  }
 
   const typeCount = Object.keys(manifest.content).length;
   const fileCount = Object.values(manifest.content).reduce((n, files) => n + files.length, 0);
