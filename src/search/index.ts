@@ -166,6 +166,17 @@ export async function searchContentType(
     }
   }
 
+  // Prerelease (Unearthed Arcana) content is auto-included in local mode — no
+  // flag required — and searched after official/homebrew so official entries
+  // rank first. It is keyed by content key, not folder, since UA files bundle
+  // many types together.
+  if (results.length < limit) {
+    const prereleaseFiles = manifest.prerelease?.[contentKey];
+    if (prereleaseFiles && prereleaseFiles.length > 0) {
+      await searchFiles(prereleaseFiles, contentKey, lowerQuery, filters, results, limit);
+    }
+  }
+
   if (fields && fields.length > 0) {
     return results.map((r) =>
       Object.fromEntries(fields.filter((f) => f in r).map((f) => [f, r[f]])),

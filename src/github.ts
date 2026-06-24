@@ -19,6 +19,22 @@ export function isLocalMode(): boolean {
   return localDataDir() !== undefined;
 }
 
+/**
+ * Local prerelease (Unearthed Arcana) data source. When LOCAL_PRERELEASE_DIR is
+ * set, the server also reads a clone of `TheGiddyLimit/unearthed-arcana` from
+ * disk. That repo lays out content-type directories (class/, subclass/, spell/,
+ * collection/, …) at its root — not under `data/` — and each JSON file bundles
+ * many content types at once. Prerelease content is a local-mode-only feature.
+ */
+function localPrereleaseDir(): string | undefined {
+  const dir = process.env.LOCAL_PRERELEASE_DIR;
+  return dir && dir.trim() !== "" && !dir.startsWith("${") ? dir : undefined;
+}
+
+export function isPrereleaseAvailable(): boolean {
+  return isLocalMode() && localPrereleaseDir() !== undefined;
+}
+
 /** Returns true only for a token that looks like a real PAT, not an empty string
  *  or an unresolved mcpb template variable like "${user_config.github_token}". */
 function isValidToken(token: string | undefined): boolean {
@@ -88,6 +104,44 @@ export async function fetchContents(
   }
   const data: unknown = await res.json();
   return Array.isArray(data) ? (data as GitHubContentsItem[]) : [data as GitHubContentsItem];
+}
+
+/**
+ * Lists every prerelease (Unearthed Arcana) data file on disk. Walks the
+ * content-type directories at the prerelease repo root (class/, subclass/,
+ * spell/, collection/, …), skipping tooling dirs (those starting with `_` or
+ * `.`) and `fluff-*` files. Returns absolute-path `url`s and mtime-keyed shas so
+ * the parse cache invalidates on change. Returns [] when prerelease is off.
+ */
+export async function listPrereleaseFiles(): Promise<
+  { name: string; path: string; url: string; sha: string }[]
+> {
+  const base = localPrereleaseDir();
+  if (!base) return [];
+
+  const rootEntries = await readdir(base, { withFileTypes: true });
+  const out: { name: string; path: string; url: string; sha: string }[] = [];
+
+  for (const dirent of rootEntries) {
+    if (!dirent.isDirectory()) continue;
+    if (dirent.name.startsWith("_") || dirent.name.startsWith(".")) continue;
+
+    const dirAbs = join(base, dirent.name);
+    const files = await readdir(dirAbs, { withFileTypes: true });
+    for (const f of files) {
+      if (!f.isFile() || !f.name.endsWith(".json")) continue;
+      if (f.name.startsWith("fluff-")) continue;
+      const absPath = join(dirAbs, f.name);
+      const info = await stat(absPath);
+      out.push({
+        name: f.name,
+        path: `${dirent.name}/${f.name}`,
+        url: absPath,
+        sha: localSha(info.mtimeMs, info.size),
+      });
+    }
+  }
+  return out;
 }
 
 /**

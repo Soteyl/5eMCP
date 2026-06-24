@@ -80,7 +80,15 @@ GITHUB_TOKEN              # Read-only PAT (5000 req/hr vs 60 unauth) — strongl
 DEFAULT_RULESET           # "2024" (default) or "2014"
 MANIFEST_TTL_SECONDS      # 3600 (default — 1 hour)
 CACHE_DIR                 # ~/.cache/5eMCP (default)
+LOCAL_DATA_DIR            # Path to an offline 5etools dump (dir containing data/). When set,
+                          #   all official content is read from disk — no network. Enables local mode.
+LOCAL_PRERELEASE_DIR      # Path to a clone of TheGiddyLimit/unearthed-arcana. Local-mode only.
+                          #   Auto-includes Unearthed Arcana / prerelease content in searches.
 ```
+
+## Prerelease (Unearthed Arcana) Content
+
+In local mode, `LOCAL_PRERELEASE_DIR` points at a clone of `TheGiddyLimit/unearthed-arcana` (the same repo 5e.tools loads prerelease content from). The official dump has no UA; this repo holds it. `buildPrereleaseManifest` (in `manifest/builder.ts`) indexes each UA file by **every JSON content key it contains** (`Manifest.prerelease: Record<contentKey, ManifestFile[]>`), because UA files bundle many content types in one file (a class file may also hold subclasses, subclass features, spells, monsters). `searchContentType` and `getEntry` scan `prerelease[contentKey]` after official/homebrew, so UA is auto-included (no flag) and official content ranks first. See `scripts/update-data.sh` for the `git pull` update flow and README "Offline / local mode".
 
 ## Data Sources
 

@@ -192,11 +192,53 @@ All calculators are purely local — no network calls, no API key needed.
 
 | Variable | Default | Description |
 |---|---|---|
-| `GITHUB_TOKEN` | — | Read-only GitHub PAT. Strongly recommended. |
+| `GITHUB_TOKEN` | — | Read-only GitHub PAT. Strongly recommended (GitHub-backed mode only). |
 | `DEFAULT_RULESET` | `"2024"` | Which ruleset to use (`"2024"` or `"2014"`). |
 | `MANIFEST_TTL_SECONDS` | `3600` | How often to rebuild the manifest (seconds). |
 | `CACHE_DIR` | `~/.cache/5eMCP` | Disk cache location (local stdio mode). |
 | `REDIS_URL` | — | Redis connection URL (e.g. `redis://localhost:6379`). When set and reachable, Redis is used instead of disk cache. Falls back to disk on connection failure. |
+| `LOCAL_DATA_DIR` | — | Path to an offline 5etools dump (a dir containing `data/`). When set, the server reads all official content from disk instead of GitHub — no network, no rate limits. See [Offline / local mode](#offline--local-mode). |
+| `LOCAL_PRERELEASE_DIR` | — | Path to a clone of [`TheGiddyLimit/unearthed-arcana`](https://github.com/TheGiddyLimit/unearthed-arcana). When set (local mode only), Unearthed Arcana / playtest content is auto-included in searches. See [Offline / local mode](#offline--local-mode). |
+
+## Offline / local mode
+
+By default the server reads 5etools content live from GitHub. Set **`LOCAL_DATA_DIR`** to a local 5etools dump and it reads everything from disk instead — fully offline, no rate limits.
+
+### Unearthed Arcana (prerelease) content
+
+The official 5etools data (`5etools-mirror-3/5etools-src`) contains **only published content** — no Unearthed Arcana. 5etools keeps UA/playtest material in a separate repo, [`TheGiddyLimit/unearthed-arcana`](https://github.com/TheGiddyLimit/unearthed-arcana) (this is the same repo the 5e.tools site itself loads prerelease content from). Point **`LOCAL_PRERELEASE_DIR`** at a clone of it and the MCP indexes it alongside the official data.
+
+UA content is **auto-included in local mode** — no per-query flag. Official content is searched first and ranks ahead of UA. Each UA file bundles many content types, so a spell or monster defined inside a class file is still found by `spell_search` / `monster_search`.
+
+### Setup (simple)
+
+```bash
+# 1. Clone the prerelease repo somewhere (shallow is fine — it's small, ~14 MB)
+git clone --depth 1 https://github.com/TheGiddyLimit/unearthed-arcana.git \
+  ~/Documents/5etools-unearthed-arcana
+
+# 2. Point the server at it (alongside your existing LOCAL_DATA_DIR), e.g. in
+#    your MCP client config's "env" block:
+#      "LOCAL_DATA_DIR":       "/path/to/5etools-dump",
+#      "LOCAL_PRERELEASE_DIR": "/path/to/5etools-unearthed-arcana"
+
+# 3. Build and restart the MCP server (reload your client session)
+npm run build
+```
+
+Then `class_search "psion"`, `subclass_search "metamorph"`, `subclassfeature_search "Organic Weapons"`, `class_get "Psion"`, etc. all resolve UA content. `manifest_status` reports a `prerelease_content_keys` summary so you can confirm it loaded.
+
+### Keeping data up to date
+
+The prerelease clone is a normal git repo, so updates are a `git pull`. A helper script pulls it (and your main data dir too, if that's also a git clone):
+
+```bash
+LOCAL_PRERELEASE_DIR=~/Documents/5etools-unearthed-arcana ./scripts/update-data.sh
+```
+
+After a pull, restart the MCP server so newly **added** files are indexed. Changed file **contents** are picked up automatically on the next manifest rebuild (hourly by default) via the mtime-keyed parse cache.
+
+> Homebrew search and the 2014 ruleset require network/GitHub mode; local mode serves the official 2024 dump plus, optionally, prerelease content.
 
 ## Ruleset Support
 

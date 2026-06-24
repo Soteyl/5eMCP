@@ -30,6 +30,11 @@ export function registerMetaTools(server: McpServer): void {
         homebrewCounts[cat] = files.length;
       }
 
+      const prereleaseCounts: Record<string, number> = {};
+      for (const [key, files] of Object.entries(manifest.prerelease ?? {})) {
+        prereleaseCounts[key] = files.length;
+      }
+
       const totalFiles = Object.values(manifest.content).reduce(
         (n, files) => n + files.length,
         0,
@@ -42,6 +47,7 @@ export function registerMetaTools(server: McpServer): void {
         total_files: totalFiles,
         content_types: contentCounts,
         homebrew_categories: homebrewCounts,
+        prerelease_content_keys: prereleaseCounts,
         unknown_types: unknownTypes,
         note: unknownTypes.length > 0
           ? `${unknownTypes.length} content types use the passthrough handler. Use fetch_content to access them.`

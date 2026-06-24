@@ -1,7 +1,12 @@
-import { fetchContents, rawUrl, isLocalMode } from "../github.js";
+import { fetchContents, fetchRaw, rawUrl, isLocalMode, isPrereleaseAvailable, listPrereleaseFiles } from "../github.js";
 import type { Manifest, ManifestFile } from "./schema.js";
 import type { Ruleset, GitHubContentsItem } from "../types.js";
 import { REPOS, HOMEBREW_REPO } from "../types.js";
+import { CONTENT_KEY_MAP } from "../translation/handlers/types.js";
+
+/** Every JSON content key the search layer knows how to read (e.g. "spell",
+ *  "monster", "subclass", "subclassFeature"). Used to index UA bundle files. */
+const KNOWN_CONTENT_KEYS = new Set(Object.values(CONTENT_KEY_MAP));
 
 function inferSource(filename: string): string | undefined {
   // e.g. "spells-phb.json" → "PHB", "bestiary-mm.json" → "MM"
@@ -121,12 +126,58 @@ export async function buildManifest(ruleset: Ruleset): Promise<Manifest> {
     }
   }
 
+  // Build prerelease (Unearthed Arcana) manifest — local mode only, when
+  // LOCAL_PRERELEASE_DIR is configured.
+  let prerelease: Record<string, ManifestFile[]> | undefined;
+  if (isPrereleaseAvailable()) {
+    try {
+      prerelease = await buildPrereleaseManifest();
+    } catch (err) {
+      console.error("Failed to build prerelease manifest:", err);
+    }
+  }
+
   return {
     ruleset,
     built_at: Date.now(),
     content,
     homebrew,
+    prerelease,
   };
+}
+
+/**
+ * Indexes the local Unearthed Arcana clone. Each UA file bundles several
+ * content types (a class file may also contain subclasses, subclass features,
+ * spells, and monsters), so files are keyed by the JSON content keys they
+ * actually contain rather than by their folder. A file is registered under
+ * every known content key for which it holds a non-empty array, so e.g. a spell
+ * defined inside a class-folder bundle is still found by a spell search.
+ */
+async function buildPrereleaseManifest(): Promise<Record<string, ManifestFile[]>> {
+  const files = await listPrereleaseFiles();
+  const prerelease: Record<string, ManifestFile[]> = {};
+
+  for (const f of files) {
+    let data: Record<string, unknown> | undefined;
+    try {
+      data = (await fetchRaw(f.url)) as Record<string, unknown>;
+    } catch (err) {
+      console.error(`Failed to read prerelease file ${f.path}:`, err);
+      continue;
+    }
+    if (!data || typeof data !== "object") continue;
+
+    const manifestFile: ManifestFile = { name: f.name, path: f.path, url: f.url, sha: f.sha };
+    for (const key of Object.keys(data)) {
+      if (!KNOWN_CONTENT_KEYS.has(key)) continue;
+      const arr = data[key];
+      if (!Array.isArray(arr) || arr.length === 0) continue;
+      (prerelease[key] ??= []).push(manifestFile);
+    }
+  }
+
+  return prerelease;
 }
 
 async function buildHomebrewManifest(homebrew: Record<string, ManifestFile[]>): Promise<void> {

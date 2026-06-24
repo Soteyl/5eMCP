@@ -180,4 +180,30 @@ describe("getEntry", () => {
     const result = await getEntry("class", "Blood Hunter", undefined, "2024") as Record<string, unknown>;
     expect(result?.sourceAuthor).toBe("Matthew Mercer");
   });
+
+  // Prerelease (Unearthed Arcana) fallback — keyed by content key, auto-included.
+  it("returns a prerelease class with resolved features when not in official or homebrew", async () => {
+    const manifest = {
+      ruleset: "2024" as const,
+      built_at: Date.now(),
+      content: { class: [] },
+      homebrew: {},
+      prerelease: {
+        class: [{ name: "Unearthed Arcana 2025 - Psion Update.json", path: "class/Unearthed Arcana 2025 - Psion Update.json", url: "https://raw.example.com/ua-psion.json", sha: "ua1" }],
+      },
+    };
+    mockGetManifest.mockResolvedValue(manifest as never);
+    mockFetchRaw.mockResolvedValueOnce({
+      class: [{ name: "Psion", source: "XUA2025PsionUpdate", edition: "one", hd: { number: 1, faces: 6 } }],
+      classFeature: [
+        { name: "Psionic Power", source: "XUA2025PsionUpdate", classSource: "XUA2025PsionUpdate", level: 1, entries: ["..."] },
+      ],
+    });
+    const result = await getEntry("class", "Psion", undefined, "2024") as Record<string, unknown>;
+    expect(result).not.toBeNull();
+    expect(result.name).toBe("Psion");
+    expect(result.source).toBe("XUA2025PsionUpdate");
+    expect(Array.isArray(result.resolvedFeatures)).toBe(true);
+    expect((result.resolvedFeatures as unknown[]).length).toBe(1);
+  });
 });

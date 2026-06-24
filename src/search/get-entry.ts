@@ -121,5 +121,13 @@ export async function getEntry(
     if (result) return result;
   }
 
+  // Fall back to prerelease (Unearthed Arcana), keyed by content key since UA
+  // files bundle many content types. Auto-included in local mode.
+  const prereleaseFiles = manifest.prerelease?.[contentKey] ?? [];
+  for (const file of prereleaseFiles) {
+    const result = await searchFiles([file]);
+    if (result) return result;
+  }
+
   return null;
 }

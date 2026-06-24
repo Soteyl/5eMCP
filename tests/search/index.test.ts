@@ -507,4 +507,76 @@ describe("searchContentType", () => {
     const results = await searchContentType("items", "vestige", "2024");
     expect(results).toHaveLength(0);
   });
+
+  // Prerelease (Unearthed Arcana) search — auto-included in local mode, keyed by
+  // content key, searched after official content.
+  it("auto-includes prerelease results without any flag", async () => {
+    const manifest = {
+      ...FAKE_MANIFEST,
+      prerelease: {
+        spell: [
+          { name: "Psion Update.json", path: "class/Psion Update.json", url: "https://raw.example.com/ua-psion.json", sha: "ua1" },
+        ],
+      },
+    };
+    mockGetManifest.mockResolvedValue(manifest as never);
+    mockFetchRaw.mockResolvedValueOnce(PHB_SPELLS);
+    mockFetchRaw.mockResolvedValueOnce(XGE_SPELLS);
+    mockFetchRaw.mockResolvedValueOnce({
+      spell: [{ name: "Fire Mind Spike", source: "XUA2025PsionUpdate", level: 2, school: "V" }],
+    });
+    // include_homebrew defaults to false — prerelease must still appear.
+    const results = await searchContentType("spells", "fire", "2024");
+    const names = results.map((r) => r.name);
+    expect(names).toContain("Fireball");
+    expect(names).toContain("Fire Mind Spike");
+  });
+
+  it("ranks official content before prerelease content", async () => {
+    const manifest = {
+      ...FAKE_MANIFEST,
+      content: { spells: FAKE_MANIFEST.content.spells.slice(0, 1) }, // single official file
+      prerelease: {
+        spell: [
+          { name: "Psion.json", path: "class/Psion.json", url: "https://raw.example.com/ua-psion.json", sha: "ua1" },
+        ],
+      },
+    };
+    mockGetManifest.mockResolvedValue(manifest as never);
+    mockFetchRaw.mockResolvedValueOnce({ spell: [{ name: "Official Fire", source: "PHB", level: 1 }] });
+    mockFetchRaw.mockResolvedValueOnce({ spell: [{ name: "UA Fire", source: "XUA2025PsionUpdate", level: 1 }] });
+    const results = await searchContentType("spells", "fire", "2024");
+    expect(results.map((r) => r.name)).toEqual(["Official Fire", "UA Fire"]);
+  });
+
+  it("finds a subclass feature that lives inside a bundled prerelease file", async () => {
+    // The builder keys UA bundles by content key, so a class-folder file that
+    // contains subclassFeature entries is registered under "subclassFeature".
+    const manifest = {
+      ...FAKE_MANIFEST,
+      content: {},
+      prerelease: {
+        subclassFeature: [
+          { name: "Psion.json", path: "class/Psion.json", url: "https://raw.example.com/ua-psion.json", sha: "ua1" },
+        ],
+      },
+    };
+    mockGetManifest.mockResolvedValue(manifest as never);
+    mockFetchRaw.mockResolvedValueOnce({
+      subclassFeature: [
+        { name: "Organic Weapons", source: "XUA2025PsionUpdate", className: "Psion", subclassShortName: "Metamorph", level: 3 },
+      ],
+    });
+    const results = await searchContentType("subclassfeatures", "Organic Weapons", "2024");
+    expect(results.map((r) => r.name)).toContain("Organic Weapons");
+  });
+
+  it("does not fetch prerelease files when no prerelease entry exists for the content key", async () => {
+    const manifest = { ...FAKE_MANIFEST, prerelease: { monster: [{ name: "x.json", path: "x", url: "https://raw.example.com/x.json", sha: "x" }] } };
+    mockGetManifest.mockResolvedValue(manifest as never);
+    mockFetchRaw.mockResolvedValueOnce(PHB_SPELLS).mockResolvedValueOnce(XGE_SPELLS);
+    await searchContentType("spells", "fire", "2024");
+    // Only the two official spell files — the monster-keyed prerelease file is untouched.
+    expect(mockFetchRaw).toHaveBeenCalledTimes(2);
+  });
 });
