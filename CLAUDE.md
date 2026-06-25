@@ -80,8 +80,10 @@ GITHUB_TOKEN              # Read-only PAT (5000 req/hr vs 60 unauth) — strongl
 DEFAULT_RULESET           # "2024" (default) or "2014"
 MANIFEST_TTL_SECONDS      # 3600 (default — 1 hour)
 CACHE_DIR                 # ~/.cache/5eMCP (default)
-LOCAL_DATA_DIR            # Path to an offline 5etools dump (dir containing data/). When set,
-                          #   all official content is read from disk — no network. Enables local mode.
+LOCAL_DATA_DIR            # Path to an offline 2024 5etools dump (dir containing data/). When set,
+                          #   official 2024 content is read from disk — no network. Enables local mode.
+LOCAL_DATA_DIR_2014       # Path to an offline 2014 dump / clone of 5etools-2014-src. Serves the
+                          #   2014 ruleset offline. Unset → 2014 queries fall back to GitHub.
 LOCAL_PRERELEASE_DIR      # Path to a clone of TheGiddyLimit/unearthed-arcana. Local-mode only.
                           #   Auto-includes Unearthed Arcana / prerelease content in searches.
 ```

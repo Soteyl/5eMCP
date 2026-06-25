@@ -197,12 +197,22 @@ All calculators are purely local — no network calls, no API key needed.
 | `MANIFEST_TTL_SECONDS` | `3600` | How often to rebuild the manifest (seconds). |
 | `CACHE_DIR` | `~/.cache/5eMCP` | Disk cache location (local stdio mode). |
 | `REDIS_URL` | — | Redis connection URL (e.g. `redis://localhost:6379`). When set and reachable, Redis is used instead of disk cache. Falls back to disk on connection failure. |
-| `LOCAL_DATA_DIR` | — | Path to an offline 5etools dump (a dir containing `data/`). When set, the server reads all official content from disk instead of GitHub — no network, no rate limits. See [Offline / local mode](#offline--local-mode). |
+| `LOCAL_DATA_DIR` | — | Path to an offline **2024** 5etools dump (a dir containing `data/`). When set, the server reads official 2024 content from disk instead of GitHub — no network, no rate limits. See [Offline / local mode](#offline--local-mode). |
+| `LOCAL_DATA_DIR_2014` | — | Path to an offline **2014** dump / clone of [`5etools-mirror-3/5etools-2014-src`](https://github.com/5etools-mirror-3/5etools-2014-src). Enables the `2014` ruleset offline. If unset, `2014` queries fall back to GitHub. See [Offline / local mode](#offline--local-mode). |
 | `LOCAL_PRERELEASE_DIR` | — | Path to a clone of [`TheGiddyLimit/unearthed-arcana`](https://github.com/TheGiddyLimit/unearthed-arcana). When set (local mode only), Unearthed Arcana / playtest content is auto-included in searches. See [Offline / local mode](#offline--local-mode). |
 
 ## Offline / local mode
 
 By default the server reads 5etools content live from GitHub. Set **`LOCAL_DATA_DIR`** to a local 5etools dump and it reads everything from disk instead — fully offline, no rate limits.
+
+The two rulesets read from **separate** dumps, selected automatically by content repo: `LOCAL_DATA_DIR` serves the `2024` ruleset (`5etools-src`) and **`LOCAL_DATA_DIR_2014`** serves the `2014` ruleset (`5etools-2014-src`). Set whichever you use; an unset ruleset simply falls back to GitHub.
+
+```bash
+# 2014 ruleset offline (optional): clone the legacy source repo …
+git clone --depth 1 https://github.com/5etools-mirror-3/5etools-2014-src.git \
+  ~/Documents/5etools-2014-src
+#   … and set "LOCAL_DATA_DIR_2014": "/path/to/5etools-2014-src" in your config.
+```
 
 ### Unearthed Arcana (prerelease) content
 
@@ -238,7 +248,7 @@ LOCAL_PRERELEASE_DIR=~/Documents/5etools-unearthed-arcana ./scripts/update-data.
 
 After a pull, restart the MCP server so newly **added** files are indexed. Changed file **contents** are picked up automatically on the next manifest rebuild (hourly by default) via the mtime-keyed parse cache.
 
-> Homebrew search and the 2014 ruleset require network/GitHub mode; local mode serves the official 2024 dump plus, optionally, prerelease content.
+> Homebrew search still requires network/GitHub mode. Local mode serves the official 2024 dump, optionally the 2014 dump (`LOCAL_DATA_DIR_2014`), and optionally prerelease content (`LOCAL_PRERELEASE_DIR`).
 
 ## Ruleset Support
 

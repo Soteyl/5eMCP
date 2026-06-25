@@ -3,7 +3,8 @@
 # Updates the local 5etools data the MCP server reads in local mode.
 #
 # - Always git-pulls the Unearthed Arcana / prerelease clone ($LOCAL_PRERELEASE_DIR).
-# - Also git-pulls the main data dir ($LOCAL_DATA_DIR) if it happens to be a git clone.
+# - Also git-pulls the main 2024 data dir ($LOCAL_DATA_DIR) and the 2014 data dir
+#   ($LOCAL_DATA_DIR_2014) if they happen to be git clones.
 #
 # After a pull, restart the MCP server (reload your Claude Code session) so newly
 # *added* files are indexed. Changed file *contents* are picked up automatically
@@ -30,7 +31,8 @@ pull_repo() {
 }
 
 pull_repo "Prerelease (Unearthed Arcana)" "${LOCAL_PRERELEASE_DIR:-}"
-pull_repo "Main data" "${LOCAL_DATA_DIR:-}"
+pull_repo "Main data (2024)" "${LOCAL_DATA_DIR:-}"
+pull_repo "Main data (2014)" "${LOCAL_DATA_DIR_2014:-}"
 
 echo
 echo "Done. Restart the MCP server (reload your Claude Code session) to index any new files."

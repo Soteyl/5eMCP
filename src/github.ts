@@ -1,22 +1,42 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join, isAbsolute } from "node:path";
 import type { GitHubContentsItem } from "./types.js";
+import { REPOS } from "./types.js";
 
 const GITHUB_API = "https://api.github.com";
 const GITHUB_RAW = "https://raw.githubusercontent.com";
 
-/**
- * Local data-source mode. When LOCAL_DATA_DIR is set, the server reads the
- * 5etools data tree from disk instead of GitHub — no network, no rate limits.
- * The directory must be the root of a 5etools dump (i.e. it contains `data/`).
- */
-function localDataDir(): string | undefined {
-  const dir = process.env.LOCAL_DATA_DIR;
+/** Reads an env var as a usable path: non-empty and not an unresolved
+ *  mcpb template like "${user_config.x}". Returns undefined otherwise. */
+function envDir(name: string): string | undefined {
+  const dir = process.env[name];
   return dir && dir.trim() !== "" && !dir.startsWith("${") ? dir : undefined;
 }
 
+/**
+ * Local data-source mode. When a LOCAL_DATA_DIR* var is set, the server reads
+ * the 5etools data tree from disk instead of GitHub — no network, no rate
+ * limits. Each directory must be the root of a 5etools dump (i.e. it contains
+ * `data/`). The 2024 and 2014 rulesets read from separate dumps:
+ *   LOCAL_DATA_DIR       → 2024 ruleset (5etools-src)
+ *   LOCAL_DATA_DIR_2014  → 2014 ruleset (5etools-2014-src)
+ */
+function localDataDir(): string | undefined {
+  return envDir("LOCAL_DATA_DIR");
+}
+
+function localData2014Dir(): string | undefined {
+  return envDir("LOCAL_DATA_DIR_2014");
+}
+
+/** Resolves the on-disk dump root for a given content repo, or undefined when
+ *  that ruleset isn't configured for local mode (so it falls back to GitHub). */
+function localBaseForRepo(repo: string): string | undefined {
+  return repo === REPOS["2014"].repo ? localData2014Dir() : localDataDir();
+}
+
 export function isLocalMode(): boolean {
-  return localDataDir() !== undefined;
+  return localDataDir() !== undefined || localData2014Dir() !== undefined;
 }
 
 /**
@@ -56,8 +76,7 @@ function localSha(mtimeMs: number, size: number): string {
   return `local-${Math.round(mtimeMs)}-${size}`;
 }
 
-async function fetchContentsLocal(path: string): Promise<GitHubContentsItem[]> {
-  const base = localDataDir()!;
+async function fetchContentsLocal(base: string, path: string): Promise<GitHubContentsItem[]> {
   const absDir = join(base, path);
   const dirents = await readdir(absDir, { withFileTypes: true });
 
@@ -93,8 +112,9 @@ export async function fetchContents(
   repo: string,
   path: string,
 ): Promise<GitHubContentsItem[]> {
-  if (isLocalMode()) {
-    return fetchContentsLocal(path);
+  const base = localBaseForRepo(repo);
+  if (base) {
+    return fetchContentsLocal(base, path);
   }
   const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${path}`;
   const res = await fetch(url, { headers: githubHeaders() });
@@ -179,8 +199,9 @@ export async function fetchRaw(url: string): Promise<unknown> {
 }
 
 export function rawUrl(owner: string, repo: string, branch: string, path: string): string {
-  if (isLocalMode()) {
-    return join(localDataDir()!, path);
+  const base = localBaseForRepo(repo);
+  if (base) {
+    return join(base, path);
   }
   return `${GITHUB_RAW}/${owner}/${repo}/${branch}/${path}`;
 }
